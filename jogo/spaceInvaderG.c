@@ -80,14 +80,14 @@ int main(){
 
     jogo.alturaJanela = ALTURA_JANELA;
     jogo.larguraJanela = LARGURA_JANELA;
-
+//
     InitWindow(jogo.larguraJanela, jogo.alturaJanela, "Space Invaders");
     SetTargetFPS(60);
     IniciaJogo(&jogo);
     CarregaImagens(&jogo);
     Music musicaJogo = LoadMusicStream("assets/musica.mp3");
     PlayMusicStream(musicaJogo);
-
+//
     while(!WindowShouldClose()){
         UpdateMusicStream(musicaJogo);
         AtualizaFrameDesenho(&jogo);
