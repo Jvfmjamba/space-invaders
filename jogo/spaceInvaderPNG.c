@@ -5,6 +5,7 @@
 #include <string.h>
 #include <math.h>
 
+
 #define LARGURA_JANELA 800
 #define ALTURA_JANELA 800
 #define STD_SIZE_X 32
@@ -42,7 +43,7 @@ typedef struct Bordas{
 
 typedef struct Assets{
     Texture2D naveVerde;
-    Texture2D millenium;
+    Texture2D heroiPng;
     Sound tiro;
 }Assets;
 
@@ -53,7 +54,7 @@ typedef struct Jogo{
     Assets assets;
     int alturaJanela;
     int larguraJanela;
-    int tempoAnimacao;
+    int tempoAnimação;
 }Jogo;
 
 void IniciaJogo(Jogo *j);
@@ -72,6 +73,7 @@ void DesenhaBordas(Jogo *j);
 void AtiraBalas(Jogo *j);
 void CarregaImagens(Jogo *j);
 void DescarregaImagens(Jogo *j);
+int EndGame(Jogo *j);
 
 int main(){
     InitAudioDevice();
@@ -81,7 +83,7 @@ int main(){
     jogo.alturaJanela = ALTURA_JANELA;
     jogo.larguraJanela = LARGURA_JANELA;
 //
-    InitWindow(jogo.larguraJanela, jogo.alturaJanela, "Space Invaders");
+    InitWindow(jogo.larguraJanela, jogo.alturaJanela, "Space Invaders 2");
     SetTargetFPS(60);
     IniciaJogo(&jogo);
     CarregaImagens(&jogo);
@@ -91,20 +93,27 @@ int main(){
     while(!WindowShouldClose()){
         UpdateMusicStream(musicaJogo);
         AtualizaFrameDesenho(&jogo);
+        
     }
     UnloadMusicStream(musicaJogo);
     DescarregaImagens(&jogo);
     CloseWindow();
+    system("clear");//limpa a tela
+    printf("Você desistiu!\n"); 
+    exit(0);//evita mensagens de crash pós execução
     return 0;
 }
 
 void IniciaJogo(Jogo *j){
-    j->tempoAnimacao = GetTime();
-
+    j->tempoAnimação = GetTime();
+    // heroi.cfg
     j->heroi.pos = (Rectangle) {LARGURA_JANELA/2 - STD_SIZE_X/2, ALTURA_JANELA - STD_SIZE_Y -10, STD_SIZE_X, STD_SIZE_Y};
     j->heroi.color = BLUE;
-    j->heroi.velocidade = 10;
-
+    j->heroi.velocidade = 10;//penultimo update da fase mov_heroi, a velocidade foi declarada para garantir o movimento do heroi
+    j->heroi.bala.ativa = 0;
+    j->heroi.bala.velocidade = -9;
+    j->heroi.bala.color = YELLOW;
+    //nave.cfg
     j->nave.pos = (Rectangle) {0, 15, STD_SIZE_X, STD_SIZE_Y};
     j->nave.color = RED;
     j->nave.velocidade = 3;
@@ -112,12 +121,8 @@ void IniciaJogo(Jogo *j){
     j->nave.direcao = 1;
     j->nave.bala.ativa = 0;
     j->nave.bala.tempo = GetTime();
-    j->nave.bala.velocidade = 5;
+    j->nave.bala.velocidade = 10;
     j->nave.bala.tiro = LoadSound("assets/shoot.wav");
-    j->heroi.bala.ativa = 0;
-    j->heroi.bala.velocidade = -9;  // Joto: velocidade  da bala do herói
-    j->heroi.bala.color = YELLOW;
-
 
     //borda encima
     j->bordas[0].pos = (Rectangle){0, 0, LARGURA_JANELA, 10};
@@ -130,15 +135,31 @@ void IniciaJogo(Jogo *j){
 }
 
 void IniciaNaves(Jogo *j){
-    j->heroi.pos = (Rectangle) {LARGURA_JANELA/2 - j->assets.millenium.width/2, 
-    ALTURA_JANELA - j->assets.millenium.height - 32, j->assets.millenium.width, 
-    j->assets.millenium.height};
+
 }
 
 void AtualizaJogo(Jogo *j){
     AtualizaNavePos(j);
-    AtualizaHeroiPos(j);
+    AtualizaHeroiPos(j);//
     AtiraBalas(j);
+    EndGame(j);
+}
+
+int EndGame(Jogo *j){
+        int resultadoColisao = ColisaoBalas(j);
+    if (resultadoColisao == 2) {//vitoria pq 2 == heroi atinge inimigo
+        CloseWindow();
+        system("clear");//limpa a tela
+        printf("Você ganhou!\n"); 
+        exit(0);//evita mensagens de erro quando fecha o jogo
+    } 
+        else if (resultadoColisao == 1) {//derrota pq 1 = inimigo atinge heroi
+            CloseWindow();
+            system("clear");//limpa a tela
+            printf("Você perdeu!\n");
+            exit(0);//evita mensagens de erro quando fecha o jogo
+        
+    }
 }
 
 void DesenhaJogo(Jogo *j){
@@ -148,18 +169,6 @@ void DesenhaJogo(Jogo *j){
     DesenhaHeroi(j);
     DesenhaBordas(j);
     EndDrawing();
-    float escala = 0.3f; // Joto: escala da nave do herói
-
-    j->heroi.pos = (Rectangle) {
-        LARGURA_JANELA / 2 - (j->assets.millenium.width * escala) / 2,
-        ALTURA_JANELA - (j->assets.millenium.height * escala) - 10,     //Joto : escala e posicionamento da nave do herói
-        j->assets.millenium.width * escala,
-        j->assets.millenium.height * escala
-    };
-    Rectangle dimensao = {0, 0, j->assets.millenium.width, j->assets.millenium.height};
-    Rectangle onde = {j->heroi.pos.x, j->heroi.pos.y, j->heroi.pos.width, j->heroi.pos.height};
-    Vector2 origem = {0, 0};
-    DrawTexturePro(j->assets.millenium, dimensao, onde, origem, 0.0f, WHITE);
 }
 
 void AtualizaFrameDesenho(Jogo *j){
@@ -174,6 +183,7 @@ void AtualizaNavePos(Jogo *j){
     }else{
         j->nave.pos.x -= j->nave.velocidade;
     }
+
 }
 
 void AtualizaHeroiPos(Jogo *j){
@@ -182,7 +192,6 @@ void AtualizaHeroiPos(Jogo *j){
         j->heroi.pos.x -= j->heroi.velocidade;
     }
 
-    // Movimentação para a direita
     if (IsKeyDown(KEY_RIGHT)) {
         j->heroi.pos.x += j->heroi.velocidade;
     }
@@ -192,12 +201,12 @@ void AtualizaHeroiPos(Jogo *j){
 
 void CarregaImagens(Jogo *j){
     j->assets.naveVerde = LoadTexture("assets/GreenAnimation.png");
-    j->assets.millenium = LoadTexture("assets/millenium.png");
+    j->assets.heroiPng = LoadTexture("assets/pistola.png");
 }
 
 void DescarregaImagens(Jogo *j){
     UnloadTexture(j->assets.naveVerde);
-    UnloadTexture(j->assets.millenium);
+    UnloadTexture(j->assets.heroiPng);
 }
 
 void DesenhaNaves(Jogo *j){
@@ -223,11 +232,22 @@ void DesenhaNaves(Jogo *j){
 }
 
 void DesenhaHeroi(Jogo *j){
-    Rectangle dimensao = {0, 0, j->assets.millenium.width, j->assets.millenium.height}; // Joto: Dimensão da textura
-    Rectangle onde = {j->heroi.pos.x, j->heroi.pos.y, j->heroi.pos.width, j->heroi.pos.height}; // Joto:  Onde desenhar
-    Vector2 origem = {0, 0}; // Joto: Origem do desenho
-    DrawTexturePro(j->assets.millenium, dimensao, onde, origem, 0.0f, WHITE);
-}   
+    Rectangle destino = {
+        j->heroi.pos.x - j->heroi.pos.width / 2, // Centraliza a imagem maior na hitbox
+        j->heroi.pos.y - j->heroi.pos.height / 1, 
+        j->heroi.pos.width * 2, // Dobra a largura
+        j->heroi.pos.height * 2 // Dobra a altura
+    };
+
+    DrawTexturePro(
+        j->assets.heroiPng, 
+        (Rectangle){0, 0, j->assets.heroiPng.width, j->assets.heroiPng.height}, // Toda a imagem
+        destino, // Posição e tamanho ajustados para a imagem
+        (Vector2){0, 0}, // Origem (canto superior esquerdo)
+        0.0f, // Sem rotação
+        WHITE // Cor de tint (branco para manter as cores originais)
+    );
+}
 
 void DesenhaBordas(Jogo *j){
     for(int i = 0; i < 4; i++){
@@ -240,21 +260,30 @@ void DesenhaBalas(Jogo *j){
 }
 
 void AtiraBalas(Jogo *j){
-     if(j->nave.bala.ativa == 0 && GetTime()-j->nave.bala.tempo > 3){
+    if(j->nave.bala.ativa == 0 && GetTime()-j->nave.bala.tempo > 3){
         j->nave.bala.pos = (Rectangle){j->nave.pos.x+j->nave.pos.width/2, j->nave.pos.y+j->nave.pos.height/2, 
         LARGURA_BALA, ALTURA_BALA};
         j->nave.bala.ativa = 1;
         j->nave.bala.tempo = GetTime();
         PlaySound(j->nave.bala.tiro);
-
     }
     else if(ColisaoBalas(j)){
         j->nave.bala.ativa = 0;
+        //bugfix: fazer com q a bala vá para a posicao da nave
+        j->nave.bala.pos = (Rectangle) {
+        j->nave.pos.x + j->nave.pos.width / 2 - LARGURA_BALA / 2, 
+        j->nave.pos.y + j->nave.pos.height / 2, 
+        LARGURA_BALA, 
+        ALTURA_BALA
+    };
     }
     if(j->nave.bala.ativa == 1){
         j->nave.bala.pos.y += j->nave.bala.velocidade;
         DesenhaBalas(j);
     }
+
+    //heroi atirando:
+
     if (IsKeyPressed(KEY_SPACE) && !j->heroi.bala.ativa) {
         j->heroi.bala.pos = (Rectangle) {
             j->heroi.pos.x + j->heroi.pos.width / 2 - LARGURA_BALA / 2,
@@ -262,7 +291,7 @@ void AtiraBalas(Jogo *j){
             LARGURA_BALA,
             ALTURA_BALA
         };
-        j->heroi.bala.ativa = 1;  
+        j->heroi.bala.ativa = 1;
     }
     if (j->heroi.bala.ativa) {
         j->heroi.bala.pos.y += j->heroi.bala.velocidade;
@@ -272,13 +301,15 @@ void AtiraBalas(Jogo *j){
         DrawRectangleRec(j->heroi.bala.pos, j->heroi.bala.color);
     }
 }
+
+
 void ColisaoBordas(Jogo *j){
     if(CheckCollisionRecs(j->nave.pos, j->bordas[2].pos)){
         j->nave.direcao = 1;
     }else if(CheckCollisionRecs(j->nave.pos, j->bordas[3].pos)){
         j->nave.direcao = 0;
     }
-         if (j->heroi.pos.x < j->bordas[2].pos.width) {
+     if (j->heroi.pos.x < j->bordas[2].pos.width) {
         j->heroi.pos.x = j->bordas[2].pos.width;
     } else if (j->heroi.pos.x + j->heroi.pos.width > j->larguraJanela - j->bordas[3].pos.width) { 
         j->heroi.pos.x = j->larguraJanela - j->heroi.pos.width - j->bordas[3].pos.width;
@@ -286,13 +317,15 @@ void ColisaoBordas(Jogo *j){
 }
 
 int ColisaoBalas(Jogo *j){
-    // Colisao bala com heroi
-    if(CheckCollisionRecs(j->heroi.pos, j->nave.bala.pos)){
-        return 1;
+    if(CheckCollisionRecs(j->heroi.bala.pos, j->nave.pos)){
+        return 2; //vitoria
     }
-    // Colisao bala com borda de baixo
+    if(CheckCollisionRecs(j->heroi.pos, j->nave.bala.pos)){
+        return 1;//derrota
+    }
     if(CheckCollisionRecs(j->nave.bala.pos, j->bordas[1].pos)){
-        return 1;
+        j->nave.bala.ativa = 0;//vai desativar a bala quando chegar na borda
+        return -1;//
     }
     return 0;
 }
