@@ -81,7 +81,7 @@ int main(){
 
     jogo.alturaJanela = ALTURA_JANELA;
     jogo.larguraJanela = LARGURA_JANELA;
-//
+//a
     InitWindow(jogo.larguraJanela, jogo.alturaJanela, "Space Invaders 2");
     SetTargetFPS(60);
     IniciaJogo(&jogo);
