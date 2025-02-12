@@ -71,6 +71,7 @@ void AtualizaFrameDesenho(Jogo *j);
 void AtualizaNavePos(Jogo *j);
 void AtualizaHeroiPos(Jogo *j); //joto: atualiza herói
 void DesenhaNaves(Jogo *j);
+void DesenhaBalas(Jogo *j); //franca: funccriada
 void DesenhaHeroi(Jogo *j);
 void ColisaoBordas(Jogo *j);
 void DesenhaBordas(Jogo *j);
@@ -144,7 +145,7 @@ void IniciaJogo(Jogo *j){
     IniciaNaves(j);//franca: chama a funcao pra iniciar as naves
 }
 
-void IniciaNaves(Jogo *j){//franca: funcao que inicia todas as naves
+void IniciaNaves(Jogo *j) {
     for (int i = 0; i < LINHAS_NAVES; i++) {
         for (int k = 0; k < COLUNAS_NAVES; k++) {
             j->naves[i][k].pos = (Rectangle){50 + k * (STD_SIZE_X + 20), 50 + i * (STD_SIZE_Y + 20), STD_SIZE_X, STD_SIZE_Y};
@@ -153,6 +154,11 @@ void IniciaNaves(Jogo *j){//franca: funcao que inicia todas as naves
             j->naves[i][k].direcao = 1;
             j->naves[i][k].ativa = 1; //franca: todas naves comecam ativas = 1
             j->naves[i][k].jaAtirou = 0; //franca: nenhuma nave comeca atirando
+
+           //franca: inicializa o tiro das naves
+            j->naves[i][k].bala.ativa = 0;
+            j->naves[i][k].bala.velocidade = 2; 
+            j->naves[i][k].bala.color = RED; 
         }
     }
 }
@@ -200,11 +206,12 @@ int EndGame(Jogo *j) {
     return 0; // O jogo continua
 }
 
-void DesenhaJogo(Jogo *j){
+void DesenhaJogo(Jogo *j) {
     BeginDrawing();
     ClearBackground(BLACK);
     DesenhaNaves(j);
     DesenhaHeroi(j);
+    DesenhaBalas(j); //franca: balas inimigas serem desenhadas
     DesenhaBordas(j);
     EndDrawing();
 }
@@ -325,53 +332,72 @@ void DesenhaBordas(Jogo *j){
     }
 }
 
-void DesenhaBalas(Jogo *j){
-    DrawRectangleRec(j->nave.bala.pos, YELLOW);
+void DesenhaBalas(Jogo *j) {//deep
+    // Desenha a bala do herói
+    if (j->heroi.bala.ativa) {
+        DrawRectangleRec(j->heroi.bala.pos, j->heroi.bala.color);
+    }
+
+    // Desenha as balas das naves inimigas
+    for (int i = 0; i < LINHAS_NAVES; i++) {
+        for (int k = 0; k < COLUNAS_NAVES; k++) {
+            if (j->naves[i][k].bala.ativa) {
+                DrawRectangleRec(j->naves[i][k].bala.pos, j->naves[i][k].bala.color);
+            }
+        }
+    }
 }
 
-void AtiraBalas(Jogo *j){
-    if(j->nave.bala.ativa == 0 && GetTime()-j->nave.bala.tempo > 3){
-        j->nave.bala.pos = (Rectangle){j->nave.pos.x+j->nave.pos.width/2, j->nave.pos.y+j->nave.pos.height/2, 
-        LARGURA_BALA, ALTURA_BALA};
-        j->nave.bala.ativa = 1;
-        j->nave.bala.tempo = GetTime();
-        PlaySound(j->nave.bala.tiro);
-    }
-    else if(ColisaoBalas(j)){
-        j->nave.bala.ativa = 0;
-        //franca: bugfix: fazer com q a bala vá para a posicao da nave
-        j->nave.bala.pos = (Rectangle) {
-        j->nave.pos.x + j->nave.pos.width / 2 - LARGURA_BALA / 2, 
-        j->nave.pos.y + j->nave.pos.height / 2, 
-        LARGURA_BALA, 
-        ALTURA_BALA
-    };
-    }
-    if(j->nave.bala.ativa == 1){
-        j->nave.bala.pos.y += j->nave.bala.velocidade;
-        DesenhaBalas(j);
+void AtiraBalas(Jogo *j) {//deep
+    // Lógica para o herói atirar
+    if (IsKeyPressed(KEY_SPACE)) {
+        if (!j->heroi.bala.ativa) { // Verifica se a bala do herói já está ativa
+            j->heroi.bala.ativa = 1; // Ativa a bala do herói
+            j->heroi.bala.pos = (Rectangle){
+                j->heroi.pos.x + j->heroi.pos.width / 2 - LARGURA_BALA / 2,
+                j->heroi.pos.y - ALTURA_BALA,
+                LARGURA_BALA,
+                ALTURA_BALA
+            };
+        }
     }
 
-    //joto: função para o herói atirar as balas
+    // Movimenta a bala do herói
+    if (j->heroi.bala.ativa) {
+        j->heroi.bala.pos.y += j->heroi.bala.velocidade;
 
-    if (IsKeyPressed(KEY_SPACE) && !j->heroi.bala.ativa) { 
-        //joto: retorna true se a tecla foi pressionada e impede de atirar mais de uma bala por vez
-        j->heroi.bala.pos = (Rectangle) {
-            j->heroi.pos.x + j->heroi.pos.width / 2 - LARGURA_BALA / 2,
-            //joto: posiciona a bala no centro horizontal do herói
-            j->heroi.pos.y - ALTURA_BALA, //joto: posiciona a bala no centro vertical do herói, acima dele
-            LARGURA_BALA,
-            ALTURA_BALA
-            //joto: define o tamanho da bala
-        };
-        j->heroi.bala.ativa = 1; //joto: bala ativa
-    }
-    if (j->heroi.bala.ativa) { //joto: se bala ativa...
-        j->heroi.bala.pos.y += j->heroi.bala.velocidade; //joto: move a bala na vertical
-        if (j->heroi.bala.pos.y + ALTURA_BALA < 0) {  //joto: verifica se bala saiu da tela
+        // Verifica se a bala saiu da tela
+        if (j->heroi.bala.pos.y + ALTURA_BALA < 0) {
             j->heroi.bala.ativa = 0;
         }
-        DrawRectangleRec(j->heroi.bala.pos, j->heroi.bala.color); //joto: desenho da bala
+    }
+
+    // Lógica para as naves inimigas atirarem
+    for (int i = 0; i < LINHAS_NAVES; i++) {
+        for (int k = 0; k < COLUNAS_NAVES; k++) {
+            if (j->naves[i][k].ativa) { // Verifica se a nave está ativa
+                // Probabilidade de atirar (2% de chance por frame)
+                if (GetRandomValue(0, 100) < 0.001 && !j->naves[i][k].bala.ativa) {
+                    j->naves[i][k].bala.ativa = 1; // Ativa a bala da nave
+                    j->naves[i][k].bala.pos = (Rectangle){
+                        j->naves[i][k].pos.x + j->naves[i][k].pos.width / 2 - LARGURA_BALA / 2,
+                        j->naves[i][k].pos.y + j->naves[i][k].pos.height,
+                        LARGURA_BALA,
+                        ALTURA_BALA
+                    };
+                }
+
+                // Movimenta a bala da nave inimiga
+                if (j->naves[i][k].bala.ativa) {
+                    j->naves[i][k].bala.pos.y += j->naves[i][k].bala.velocidade;
+
+                    // Verifica se a bala saiu da tela
+                    if (j->naves[i][k].bala.pos.y > ALTURA_JANELA) {
+                        j->naves[i][k].bala.ativa = 0; // Desativa a bala
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -396,34 +422,54 @@ int ColisaoBalas(Jogo *j) {
             if (j->naves[i][k].ativa && CheckCollisionRecs(j->heroi.bala.pos, j->naves[i][k].pos)) {
                 j->naves[i][k].ativa = 0; // Desativa a nave inimiga
                 j->heroi.bala.ativa = 0;  // Desativa a bala do herói
-                // Reseta a posição da bala do herói
-                j->heroi.bala.pos = (Rectangle){
-                    j->heroi.pos.x + j->heroi.pos.width / 2 - LARGURA_BALA / 2,
-                    j->heroi.pos.y - ALTURA_BALA,
-                    LARGURA_BALA,
-                    ALTURA_BALA
-                };
+
+                // Resetando a posição da bala do herói para fora da tela
+                j->heroi.bala.pos.x = -100;  // Fora da tela na direção X
+                j->heroi.bala.pos.y = -100;  // Fora da tela na direção Y
+
                 return 2; // Indica que uma nave foi atingida
             }
         }
     }
 
     // Verifica colisão da bala da nave inimiga com o herói
-    if (CheckCollisionRecs(j->heroi.pos, j->nave.bala.pos)) {
-        j->heroi.vidas--; // Retira uma vida do herói
-        j->nave.bala.ativa = 0; // Desativa a bala da nave inimiga
+    for (int i = 0; i < LINHAS_NAVES; i++) {
+        for (int k = 0; k < COLUNAS_NAVES; k++) {
+            if (j->naves[i][k].bala.ativa && CheckCollisionRecs(j->heroi.pos, j->naves[i][k].bala.pos)) {
+                j->heroi.vidas--; // Retira uma vida do herói
+                j->naves[i][k].bala.ativa = 0; // Desativa a bala da nave inimiga
 
-        if (j->heroi.vidas <= 0) {
-            return 1; // Derrota (vidas do herói acabaram)
+                if (j->heroi.vidas <= 0) {
+                    return 1; // Derrota (vidas do herói acabaram)
+                }
+                return -1; // Herói perdeu uma vida, mas ainda está no jogo
+            }
         }
-        return -1; // Herói perdeu uma vida, mas ainda está no jogo
     }
 
-    // Verifica colisão da bala da nave inimiga com a borda inferior
-    if (CheckCollisionRecs(j->nave.bala.pos, j->bordas[1].pos)) {
-        j->nave.bala.ativa = 0; // Desativa a bala da nave inimiga
-        return -1; // Bala da nave inimiga atingiu a borda inferior
+    // Verifica se a bala das naves inimigas atingiu a borda ou saiu da tela
+    for (int i = 0; i < LINHAS_NAVES; i++) {
+        for (int k = 0; k < COLUNAS_NAVES; k++) {
+            if (j->naves[i][k].bala.ativa) {
+                // Se a bala inimiga saiu da tela ou atingiu a borda
+                if (j->naves[i][k].bala.pos.y < 0 || j->naves[i][k].bala.pos.y > ALTURA_JANELA) {
+                    j->naves[i][k].bala.ativa = 0;  // Desativa a bala
+                }
+            }
+        }
+    }
+
+    // Desativa a bala das naves inimigas que foram destruídas
+    for (int i = 0; i < LINHAS_NAVES; i++) {
+        for (int k = 0; k < COLUNAS_NAVES; k++) {
+            if (!j->naves[i][k].ativa && j->naves[i][k].bala.ativa) {
+                j->naves[i][k].bala.ativa = 0; // Desativa a bala da nave destruída
+            }
+        }
     }
 
     return 0; // Nenhuma colisão relevante ocorreu
 }
+
+
+
