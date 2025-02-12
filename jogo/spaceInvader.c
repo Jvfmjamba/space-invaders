@@ -32,6 +32,7 @@ typedef struct Nave{
     int direcao;
     int ativa; //franca: verificar se a nave esta ativa
     int jaAtirou; //franca: verifica se o tiro da nave esta ativo
+    double ultimoTiro; //franca: ativar o cooldown de disparo
 }Nave;
 
 typedef struct Heroi{
@@ -154,11 +155,13 @@ void IniciaNaves(Jogo *j) {
             j->naves[i][k].direcao = 1;
             j->naves[i][k].ativa = 1; //franca: todas naves comecam ativas = 1
             j->naves[i][k].jaAtirou = 0; //franca: nenhuma nave comeca atirando
+            j->naves[i][k].ultimoTiro = 0.0; //franca: inicia o temporizador
 
            //franca: inicializa o tiro das naves
             j->naves[i][k].bala.ativa = 0;
             j->naves[i][k].bala.velocidade = 2; 
             j->naves[i][k].bala.color = RED; 
+            
         }
     }
 }
@@ -349,24 +352,22 @@ void DesenhaBalas(Jogo *j) {//deep
 }
 
 void AtiraBalas(Jogo *j) {//deep
-    // Lógica para o herói atirar
-    if (IsKeyPressed(KEY_SPACE)) {
-        if (!j->heroi.bala.ativa) { // Verifica se a bala do herói já está ativa
-            j->heroi.bala.ativa = 1; // Ativa a bala do herói
-            j->heroi.bala.pos = (Rectangle){
-                j->heroi.pos.x + j->heroi.pos.width / 2 - LARGURA_BALA / 2,
-                j->heroi.pos.y - ALTURA_BALA,
-                LARGURA_BALA,
-                ALTURA_BALA
-            };
-        }
+    double tempoAtual = GetTime(); // Obtém o tempo atual
+
+    // Lógica para o herói atirar (mantida)
+    if (IsKeyPressed(KEY_SPACE) && !j->heroi.bala.ativa) {
+        j->heroi.bala.ativa = 1;
+        j->heroi.bala.pos = (Rectangle){
+            j->heroi.pos.x + j->heroi.pos.width / 2 - LARGURA_BALA / 2,
+            j->heroi.pos.y - ALTURA_BALA,
+            LARGURA_BALA,
+            ALTURA_BALA
+        };
     }
 
-    // Movimenta a bala do herói
+    // Movimenta a bala do herói (mantida)
     if (j->heroi.bala.ativa) {
         j->heroi.bala.pos.y += j->heroi.bala.velocidade;
-
-        // Verifica se a bala saiu da tela
         if (j->heroi.bala.pos.y + ALTURA_BALA < 0) {
             j->heroi.bala.ativa = 0;
         }
@@ -375,25 +376,27 @@ void AtiraBalas(Jogo *j) {//deep
     // Lógica para as naves inimigas atirarem
     for (int i = 0; i < LINHAS_NAVES; i++) {
         for (int k = 0; k < COLUNAS_NAVES; k++) {
-            if (j->naves[i][k].ativa) { // Verifica se a nave está ativa
-                // Probabilidade de atirar (2% de chance por frame)
-                if (GetRandomValue(0, 100) < 0.001 && !j->naves[i][k].bala.ativa) {
-                    j->naves[i][k].bala.ativa = 1; // Ativa a bala da nave
-                    j->naves[i][k].bala.pos = (Rectangle){
-                        j->naves[i][k].pos.x + j->naves[i][k].pos.width / 2 - LARGURA_BALA / 2,
-                        j->naves[i][k].pos.y + j->naves[i][k].pos.height,
-                        LARGURA_BALA,
-                        ALTURA_BALA
-                    };
+            if (j->naves[i][k].ativa) {
+                // Verifica se passou o tempo mínimo (ex: 2 segundos)
+                if ((tempoAtual - j->naves[i][k].ultimoTiro) >= 2.0) {
+                    
+                    if (GetRandomValue(0, 100) < 0.001 && !j->naves[i][k].bala.ativa) {//franca: chance de tiro
+                        j->naves[i][k].bala.ativa = 1;
+                        j->naves[i][k].bala.pos = (Rectangle){
+                            j->naves[i][k].pos.x + j->naves[i][k].pos.width / 2 - LARGURA_BALA / 2,
+                            j->naves[i][k].pos.y + j->naves[i][k].pos.height,
+                            LARGURA_BALA,
+                            ALTURA_BALA
+                        };
+                        j->naves[i][k].ultimoTiro = tempoAtual; // Atualiza o tempo do último disparo
+                    }
                 }
 
                 // Movimenta a bala da nave inimiga
                 if (j->naves[i][k].bala.ativa) {
                     j->naves[i][k].bala.pos.y += j->naves[i][k].bala.velocidade;
-
-                    // Verifica se a bala saiu da tela
                     if (j->naves[i][k].bala.pos.y > ALTURA_JANELA) {
-                        j->naves[i][k].bala.ativa = 0; // Desativa a bala
+                        j->naves[i][k].bala.ativa = 0;
                     }
                 }
             }
