@@ -1,7 +1,0 @@
-{
-   badclose
-   CoreError:FdBadClose
-   fun:*close*
-   fun:closefile
-   #fun:main
-}
