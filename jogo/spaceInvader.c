@@ -15,6 +15,12 @@
 #define LINHAS_NAVES 4
 #define COLUNAS_NAVES 7
 
+//franca: adicionar enunciado para as telas do jogo
+typedef enum {
+    TELA_INICIAL,
+    JOGANDO
+} GameState;
+
 typedef struct Bala{
     Rectangle pos;
     Color color;
@@ -62,7 +68,10 @@ typedef struct Jogo{
     int alturaJanela;
     int larguraJanela;
     int tempoanimacao;
+    GameState estado; //franca: adicionado por conta do enunciado
+    char nomeJogador[20]; //franca: adicionado por conta do enunciado
 }Jogo;
+
 
 void IniciaJogo(Jogo *j);
 void IniciaNaves(Jogo *j);
@@ -72,7 +81,8 @@ void AtualizaFrameDesenho(Jogo *j);
 void AtualizaNavePos(Jogo *j);
 void AtualizaHeroiPos(Jogo *j); //joto: atualiza herói
 void DesenhaNaves(Jogo *j);
-void DesenhaBalas(Jogo *j); //franca: funccriada
+void DesenhaBalas(Jogo *j); //franca: func criada
+void DrawStartScreen(Jogo *j); //franca: func criada
 void DesenhaHeroi(Jogo *j);
 void ColisaoBordas(Jogo *j);
 void DesenhaBordas(Jogo *j);
@@ -106,7 +116,7 @@ int main(){
     UnloadMusicStream(musicaJogo);
     DescarregaImagens(&jogo);
     CloseWindow();
-    system("clear");//Franca: Limpa a tela após fechar jogo
+    system("clear");//franca: limpa a tela após fechar jogo
     printf("Você desistiu!\n"); 
     exit(0);
     return 0;
@@ -121,7 +131,7 @@ void IniciaJogo(Jogo *j){
     j->heroi.bala.ativa = 0; //joto: ativa a bala do herói
     j->heroi.bala.velocidade = -9; //joto: define a velocidade da bala
     j->heroi.bala.color = YELLOW; //joto: define a cor da bala
-    j->heroi.vidas = 4; //franca: inicializa com 3 vidas
+    j->heroi.vidas = 3; //franca: inicializa com 3 vidas
 
 
     
@@ -474,5 +484,23 @@ int ColisaoBalas(Jogo *j) {
     return 0; // Nenhuma colisão relevante ocorreu
 }
 
-
+void DrawStartScreen(Jogo *j) {
+    BeginDrawing();
+    ClearBackground(BLACK);
+    
+    // Título
+    DrawText("SPACE INVADERS", LARGURA_JANELA/2 - MeasureText("SPACE INVADERS", 40)/2, 100, 40, GREEN);
+    
+    // Input do nome
+    DrawText("Digite seu nome:", LARGURA_JANELA/2 - 120, 300, 20, WHITE);
+    DrawRectangle(LARGURA_JANELA/2 - 150, 340, 300, 40, DARKGRAY);
+    DrawText(j->nomeJogador, LARGURA_JANELA/2 - MeasureText(j->nomeJogador, 20)/2, 350, 20, WHITE);
+    
+    // Instrução
+    if (strlen(j->nomeJogador) > 0) {
+        DrawText("Pressione ENTER para jogar", LARGURA_JANELA/2 - MeasureText("Pressione ENTER para jogar", 20)/2, 450, 20, GREEN);
+    }
+    
+    EndDrawing();
+}
 
