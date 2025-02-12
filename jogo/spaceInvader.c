@@ -377,8 +377,8 @@ void AtiraBalas(Jogo *j) {//deep
     for (int i = 0; i < LINHAS_NAVES; i++) {
         for (int k = 0; k < COLUNAS_NAVES; k++) {
             if (j->naves[i][k].ativa) {
-                // Verifica se passou o tempo mínimo (ex: 2 segundos)
-                if ((tempoAtual - j->naves[i][k].ultimoTiro) >= 2.0) {
+                
+                if ((tempoAtual - j->naves[i][k].ultimoTiro) >= 2.0) {//franca: temporizador de tiro
                     
                     if (GetRandomValue(0, 100) < 0.001 && !j->naves[i][k].bala.ativa) {//franca: chance de tiro
                         j->naves[i][k].bala.ativa = 1;
