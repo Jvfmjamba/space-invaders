@@ -220,7 +220,6 @@ int EndGame(Jogo *j) {
     if (IsKeyPressed(KEY_F2)) { //franca: hack de f2 para vitoria
         j->estado = TELA_VITORIA;
         printf("[DEBUG] Hack F2 ativado: Vitória forçada!\n");
-        return;
     }
 
     if (j->heroi.vidas <= 0) {
