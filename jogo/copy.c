@@ -6,7 +6,7 @@
 #include <math.h>
 
 #define LARGURA_JANELA 800
-#define ALTURA_JANELA 800
+#define ALTURA_JANELA 600
 #define STD_SIZE_X 32
 #define STD_SIZE_Y 32
 #define LARGURA_BALA 10
@@ -17,7 +17,9 @@
 //franca: adicionar enunciado para as telas do jogo
 typedef enum {
     TELA_INICIAL,
-    JOGANDO
+    JOGANDO,
+    TELA_VITORIA,   //franca: tela de vitoria
+    TELA_DERROTA    //franca: tela de derrota
 } GameState;
 
 typedef struct Bala {
@@ -55,6 +57,7 @@ typedef struct Bordas {
 typedef struct Assets {
     Texture2D naveVerde;
     Texture2D heroiPng; //joto: adição de variável do tipo texture 2d para a nave do herói
+    Texture2D background; //franca: tela de fundo
     Sound tiro;
 } Assets;
 
@@ -72,6 +75,8 @@ typedef struct Jogo {
 } Jogo;
 
 // Protótipos de funções (comentários preservados)
+void DrawWinScreen(Jogo *j); //franca: func criada
+void DrawLoseScreen(Jogo *j); //franca: func criada
 void IniciaJogo(Jogo *j);
 void IniciaNaves(Jogo *j);
 void AtualizaJogo(Jogo *j);
@@ -107,25 +112,35 @@ int main(){
     IniciaJogo(&jogo);
     CarregaImagens(&jogo);
     Music musicaJogo = LoadMusicStream("assets/musica.mp3");
+    jogo.assets.tiro = LoadSound("shoot.wav");//franca: rrega o som de tiro
+    
     PlayMusicStream(musicaJogo);
 //
-    while(!WindowShouldClose()){
-        UpdateMusicStream(musicaJogo);
-        
-        //franca: verifica o estado do jogo
-        if(jogo.estado == TELA_INICIAL){
-            DrawStartScreen(&jogo); //franca: exibe a tela inicial
-        }
-        else if(jogo.estado == JOGANDO){
-            AtualizaFrameDesenho(&jogo); //franca: inicia o jogo
-        }
+while (!WindowShouldClose()) {
+    UpdateMusicStream(musicaJogo);
+
+    switch (jogo.estado) {
+        case TELA_INICIAL:
+            DrawStartScreen(&jogo);
+            break;
+        case JOGANDO:
+            AtualizaFrameDesenho(&jogo);
+            break;
+        case TELA_VITORIA:    //franca: novo caso
+            DrawWinScreen(&jogo);
+            break;
+        case TELA_DERROTA:    //franca: novo caso
+            DrawLoseScreen(&jogo);
+            break;
     }
+}
     UnloadMusicStream(musicaJogo);
     DescarregaImagens(&jogo);
+    UnloadSound(jogo.assets.tiro);//franca: descarrega o som de tiro
+    CloseAudioDevice();
     CloseWindow();
     system("clear");//franca: limpa a tela após fechar jogo
     printf("Você desistiu!\n"); 
-    exit(0);
     return 0;
 }
 
@@ -156,6 +171,7 @@ void IniciaJogo(Jogo *j) {
     j->nave.bala.tempo = GetTime();
     j->nave.bala.velocidade = 10;
     j->nave.bala.tiro = LoadSound("assets/shoot.wav");
+    j->assets.tiro = LoadSound("assets/shoot.wav");
 
     //borda encima
     j->bordas[0].pos = (Rectangle){0, 0, LARGURA_JANELA, 10};
@@ -199,43 +215,35 @@ void AtualizaJogo(Jogo *j) {
 
 //franca: acaba jogo
 int EndGame(Jogo *j) {
-    int resultadoColisao = ColisaoBalas(j);
-
     // Verifica se o herói perdeu todas as vidas
+    
+    if (IsKeyPressed(KEY_F2)) { //franca: hack de f2 para vitoria
+        j->estado = TELA_VITORIA;
+        printf("[DEBUG] Hack F2 ativado: Vitória forçada!\n");
+        return;
+    }
+
     if (j->heroi.vidas <= 0) {
-        CloseWindow();
-        system("clear"); // Limpa a tela
-        printf("Você perdeu!\n");
-        exit(0);
+        j->estado = TELA_DERROTA; //franca: muda para tela de derrota
+        return 1;
     }
 
     // Verifica se todas as naves foram destruídas
-    int todasNavesDestruidas = 1;
     for (int i = 0; i < LINHAS_NAVES; i++) {
         for (int k = 0; k < COLUNAS_NAVES; k++) {
-            if (j->naves[i][k].ativa) {
-                todasNavesDestruidas = 0;
-                break;
-            }
+            if (j->naves[i][k].ativa) return 0; // Ainda há naves
         }
-        if (!todasNavesDestruidas) break;
     }
 
-    if (todasNavesDestruidas) {
-        CloseWindow();
-        system("clear");
-        printf("Você ganhou!\n");
-        exit(0);
-    }
-
-    return 0;
+    j->estado = TELA_VITORIA; //franca: muda para tela de vitória
+    return 1;
 }
 
 
 //franca: Desenha todos elementos do jogo
 void DesenhaJogo(Jogo *j) {
     BeginDrawing();
-    ClearBackground(BLACK);
+    DrawTexture(j->assets.background, 0, 0, WHITE);
     DesenhaNaves(j);
     DesenhaHeroi(j);
     DesenhaBalas(j); //franca: balas inimigas serem desenhadas
@@ -293,6 +301,8 @@ void CarregaImagens(Jogo *j) {
     j->assets.naveVerde = LoadTexture("assets/GreenAnimation.png");
     j->assets.heroiPng = LoadTexture("assets/pistola.png"); //joto: carrega a textura da nave do herói
     j->assets.tiro = LoadSound("assets/shoot.wav"); //franca: carrega o som do tiro
+    j->assets.background = LoadTexture("assets/background.gif"); // franca: carrega o background
+    
 }
 
 //franca: Descarrega recursos
@@ -300,6 +310,7 @@ void DescarregaImagens(Jogo *j) {
     UnloadTexture(j->assets.naveVerde);
     UnloadTexture(j->assets.heroiPng); //joto: descarrega a textura do herói
     UnloadSound(j->assets.tiro); //franca: descarrega o som do tiro
+    UnloadTexture(j->assets.background);//franca: descarrega o background
 }
 
 //franca: Desenha naves inimigas
@@ -462,7 +473,7 @@ void DrawStartScreen(Jogo *j) {
     ClearBackground(BLACK);  
     
     //franca: desenha o título do jogo centralizado  
-    DrawText("SPACE INVADERS", LARGURA_JANELA/2 - MeasureText("SPACE INVADERS", 40)/2, 100, 40, GREEN);  
+    DrawText("SPACE INVADERS 2", LARGURA_JANELA/2 - MeasureText("SPACE INVADERS 2", 40)/2, 100, 40, RED);  
     
     //franca: desenha a interface para input do nome  
     DrawText("Digite seu nome:", LARGURA_JANELA/2 - 120, 300, 20, WHITE);  
@@ -485,7 +496,7 @@ void DrawStartScreen(Jogo *j) {
 
     //franca: exibe instrução para iniciar o jogo se nome for preenchido  
     if (strlen(j->nomeJogador) > 0) {  
-        DrawText("Pressione ENTER para jogar", LARGURA_JANELA/2 - MeasureText("Pressione ENTER para jogar", 20)/2, 450, 20, GREEN);  
+        DrawText("Pressione ENTER para jogar", LARGURA_JANELA/2 - MeasureText("Pressione ENTER para jogar", 20)/2, 450, 20, RED);  
     }  
 
     //franca: troca para o estado JOGANDO ao pressionar Enter  
@@ -495,3 +506,36 @@ void DrawStartScreen(Jogo *j) {
 
     EndDrawing();  
 }  
+
+//franca: Tela de vitória
+void DrawWinScreen(Jogo *j) {
+    BeginDrawing();
+    ClearBackground(BLACK);
+    
+    DrawText("VOCÊ GANHOU!", LARGURA_JANELA/2 - MeasureText("VOCÊ GANHOU!", 50)/2, 200, 50, GREEN);
+    DrawText("Pressione qualquer tecla para voltar ao menu", LARGURA_JANELA/2 - MeasureText("Pressione qualquer tecla para voltar ao menu", 20)/2, 400, 20, WHITE);
+    DrawText("Pressione ESC para sair do jogo", LARGURA_JANELA/2 - MeasureText("Pressione ESC para sair do menu", 20)/2, 450, 20, WHITE);
+    
+    if (GetKeyPressed() != 0) {
+        j->estado = TELA_INICIAL; //franca: volta ao menu
+        IniciaJogo(j); //franca: reinicia o jogo
+    }
+    
+    EndDrawing();
+}
+
+//franca: Tela de derrota
+void DrawLoseScreen(Jogo *j) {
+    BeginDrawing();
+    ClearBackground(BLACK);
+    
+    DrawText("VOCÊ PERDEU!", LARGURA_JANELA/2 - MeasureText("VOCÊ PERDEU!", 50)/2, 200, 50, RED);
+    DrawText("Pressione qualquer tecla para voltar ao menu", LARGURA_JANELA/2 - MeasureText("Pressione qualquer tecla para voltar ao menu", 20)/2, 400, 20, WHITE);
+    DrawText("Pressione ESC para sair do jogo", LARGURA_JANELA/2 - MeasureText("Pressione ESC para sair do menu", 20)/2, 450, 20, WHITE);
+    if (GetKeyPressed() != 0) {
+        j->estado = TELA_INICIAL; //franca: volta ao menu
+        IniciaJogo(j); //franca: reinicia o jogo
+    }
+    
+    EndDrawing();
+}
