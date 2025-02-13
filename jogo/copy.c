@@ -14,6 +14,8 @@
 #define LINHAS_NAVES 4
 #define COLUNAS_NAVES 7
 
+
+
 //franca: adicionar enunciado para as telas do jogo
 typedef enum {
     TELA_INICIAL,
@@ -21,6 +23,14 @@ typedef enum {
     TELA_VITORIA,   //franca: tela de vitoria
     TELA_DERROTA    //franca: tela de derrota
 } GameState;
+//franca: leaderboard status
+
+typedef struct {
+    char nomeJogador[20];
+    int pontuacao;
+} Registro;
+
+Registro leaderboard[5]; //franca: declarando variavel global
 
 typedef struct Bala {
     Rectangle pos;
@@ -72,11 +82,16 @@ typedef struct Jogo {
     int tempoanimacao;
     GameState estado; //franca: adicionado por conta do enunciado
     char nomeJogador[20]; //franca: adicionado por conta do enunciado
+    int navesDestruidas; //franca: pontuacao
 } Jogo;
 
 // Protótipos de funções (comentários preservados)
 void DrawWinScreen(Jogo *j); //franca: func criada
 void DrawLoseScreen(Jogo *j); //franca: func criada
+void CarregaLeaderboard(); //franca: func criada
+void SalvaLeaderboard(); //franca: func criada
+void AtualizaLeaderboard(const char *nomeJogador, int pontuacao); //franca: func criada
+void FinalizaJogo(int pontuacao, const char *nomeJogador); //franca: func criada
 void IniciaJogo(Jogo *j);
 void IniciaNaves(Jogo *j);
 void AtualizaJogo(Jogo *j);
@@ -95,6 +110,7 @@ void AtiraBalas(Jogo *j);
 void CarregaImagens(Jogo *j);
 void DescarregaImagens(Jogo *j);
 int EndGame(Jogo *j); //franca: acaba jogo
+
 
 //==============================================
 // FUNÇÃO PRINCIPAL (comentários preservados)
@@ -115,6 +131,7 @@ int main(){
     jogo.assets.tiro = LoadSound("shoot.wav");//franca: rrega o som de tiro
     
     PlayMusicStream(musicaJogo);
+    CarregaLeaderboard();//franca: carregando a funcao da leaderboard
 //
 while (!WindowShouldClose()) {
     UpdateMusicStream(musicaJogo);
@@ -216,14 +233,17 @@ void AtualizaJogo(Jogo *j) {
 //franca: acaba jogo
 int EndGame(Jogo *j) {
     // Verifica se o herói perdeu todas as vidas
-    
     if (IsKeyPressed(KEY_F2)) { //franca: hack de f2 para vitoria
         j->estado = TELA_VITORIA;
         printf("[DEBUG] Hack F2 ativado: Vitória forçada!\n");
+        AtualizaLeaderboard(j->nomeJogador, j->navesDestruidas);
+        j->navesDestruidas = 0;
     }
 
     if (j->heroi.vidas <= 0) {
         j->estado = TELA_DERROTA; //franca: muda para tela de derrota
+        AtualizaLeaderboard(j->nomeJogador, j->navesDestruidas); // Atualiza a leaderboard na derrota
+        j->navesDestruidas = 0;
         return 1;
     }
 
@@ -235,8 +255,12 @@ int EndGame(Jogo *j) {
     }
 
     j->estado = TELA_VITORIA; //franca: muda para tela de vitória
+    AtualizaLeaderboard(j->nomeJogador, j->navesDestruidas); // Atualiza a leaderboard na vitória
+    j->navesDestruidas = 0;
     return 1;
 }
+
+
 
 
 //franca: Desenha todos elementos do jogo
@@ -440,6 +464,7 @@ int ColisaoBalas(Jogo *j) {
                 j->naves[i][k].ativa = 0; // Desativa a nave inimiga
                 j->heroi.bala.ativa = 0; // Desativa a bala do herói
                 j->heroi.bala.pos = (Rectangle){-100, -100, 0, 0}; // Move a bala para fora da tela
+                j->navesDestruidas++;
                 return 2; // Indica que uma nave foi atingida
             }
         }
@@ -475,10 +500,19 @@ void DrawStartScreen(Jogo *j) {
     DrawText("SPACE INVADERS 2", LARGURA_JANELA/2 - MeasureText("SPACE INVADERS 2", 40)/2, 100, 40, RED);  
     
     //franca: desenha a interface para input do nome  
-    DrawText("Digite seu nome:", LARGURA_JANELA/2 - 120, 300, 20, WHITE);  
-    DrawRectangle(LARGURA_JANELA/2 - 150, 340, 300, 40, DARKGRAY); //caixa de texto  
-    DrawText(j->nomeJogador, LARGURA_JANELA/2 - MeasureText(j->nomeJogador, 20)/2, 350, 20, WHITE); //texto digitado  
+    DrawText("Digite seu nome:", LARGURA_JANELA/2 - 80, 200, 20, WHITE);  
+    DrawRectangle(LARGURA_JANELA/2 - 150, 250, 300, 40, DARKGRAY); //caixa de texto  
+    DrawText(j->nomeJogador, LARGURA_JANELA/2 - MeasureText(j->nomeJogador, 20)/2, 260, 20, WHITE); //texto digitado  
     
+    DrawText("Leaderboard", LARGURA_JANELA/2 - MeasureText("Leaderboard", 30)/2, 350, 30, YELLOW);
+
+    // Exibe os registros do leaderboard
+    for (int i = 0; i < 5; i++) {
+        char texto[50];
+        sprintf(texto, "%s - %d", leaderboard[i].nomeJogador, leaderboard[i].pontuacao);
+        DrawText(texto, LARGURA_JANELA/2 - MeasureText(texto, 20)/2, 400 + i * 25, 20, WHITE);
+    }
+
     //franca: captura caracteres válidos (ASCII 32-126) e limita a 19 caracteres  
     int key = GetCharPressed();  
     while (key > 0) {  
@@ -495,7 +529,7 @@ void DrawStartScreen(Jogo *j) {
 
     //franca: exibe instrução para iniciar o jogo se nome for preenchido  
     if (strlen(j->nomeJogador) > 0) {  
-        DrawText("Pressione ENTER para jogar", LARGURA_JANELA/2 - MeasureText("Pressione ENTER para jogar", 20)/2, 450, 20, RED);  
+        DrawText("Pressione ENTER para jogar", LARGURA_JANELA/2 - MeasureText("Pressione ENTER para jogar", 20)/2, 300, 20, RED);  
     }  
 
     //franca: troca para o estado JOGANDO ao pressionar Enter  
@@ -537,4 +571,54 @@ void DrawLoseScreen(Jogo *j) {
     }
     
     EndDrawing();
+}
+//franca: funcao pra carregar leaderboard
+void CarregaLeaderboard() {
+    FILE *file = fopen("leaderboard.txt", "r");
+    if (file != NULL) {
+        for (int i = 0; i < 5; i++) {
+            if (fscanf(file, "%s %d", leaderboard[i].nomeJogador, &leaderboard[i].pontuacao) != 2) {
+                // Se o arquivo estiver corrompido ou incompleto, inicializa com valores vazios
+                strcpy(leaderboard[i].nomeJogador, "");
+                leaderboard[i].pontuacao = 0;
+            }
+        }
+        fclose(file);
+    } else {
+        // Se o arquivo não existir, inicializa com dados vazios
+        for (int i = 0; i < 5; i++) {
+            strcpy(leaderboard[i].nomeJogador, "");
+            leaderboard[i].pontuacao = 0;
+        }
+    }
+}
+
+//franca: funcao pra salvar leaderboard
+void SalvaLeaderboard() {
+    FILE *file = fopen("leaderboard.txt", "w");
+    if (file != NULL) {
+        for (int i = 0; i < 5; i++) {
+            fprintf(file, "%s %d\n", leaderboard[i].nomeJogador, leaderboard[i].pontuacao);
+        }
+        fclose(file);
+    }
+}
+
+void AtualizaLeaderboard(const char *nomeJogador, int pontuacao) {
+    // Desloca os registros para baixo
+    for (int i = 4; i > 0; i--) {
+        strcpy(leaderboard[i].nomeJogador, leaderboard[i - 1].nomeJogador);
+        leaderboard[i].pontuacao = leaderboard[i - 1].pontuacao;
+    }
+    // Adiciona o novo jogo na primeira posição
+    strcpy(leaderboard[0].nomeJogador, nomeJogador);
+    leaderboard[0].pontuacao = pontuacao;
+
+    // Salva o novo histórico no arquivo
+    SalvaLeaderboard();
+}
+
+void FinalizaJogo(int pontuacao, const char *nomeJogador) {
+    AtualizaLeaderboard(nomeJogador, pontuacao);
+    // Outras ações ao final do jogo, como exibir uma mensagem de derrota ou vitória
 }
