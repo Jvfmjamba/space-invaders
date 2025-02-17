@@ -1,0 +1,37 @@
+BASE:
+*- jogo base do GitHub;*
+*- tela 800x600;*
+*- tela inicial, que solicite um apelido e exiba o placar dos 5 últimos jogos, o jogador deve apertar ENTER para começar;
+
+NAVES:
+*- nave do jogador deve se movimentar com as setas;
+*- nave do jogador deve atirar quando pressionar ESPAÇO (tiro deve acertar a nave inimiga ou objetos);*
+*- o jogador deve ter 3 vidas(perde se for atingido);
+*- as naves devem ser movimentar em linhas (vetores);
+*- quando a nave é derrotada, a posição do vetor fica vazia;
+*- todas as naves possuem uma probabilidade X de atirar, podendo ser todas ao mesmo tempo;
+*- cada nave so atira uma vez;
+
+ BARREIRAS:
+*- as barreiras amortecem tiros das naves inimigas
+*- as barreiras possuem pontos de vida, que caso sejam atingidas X vezes por naves INIMIGAS, desaparecem;
+
+MAPA:
+*- o mapa possui no mínimo 4 linhas(vetores) de naves inimigas, cada linha possui ao menos 7 naves inimigas, e 4 espaços horizontais para movimentação;
+*- deve possuir no mínimo 3 barreiras;
+*- o mapa funciona por rodadas, que a cada determinado tempo, mudam a dificuldade da fase;
+*- a dificuldade do mapa depende da duração da rodada(quanto menor a duração, mais rápido o movimento) e quanto maior a probabilidade de atirarem, mais tiros estarão na tela;
+*- o mapa acaba quando todas naves inimigas forem derrotadas;
+*- o jogo deve possuir um gerador de mapas aleatórios, que gere um mapa com numero de linhas de naves, probabilidade de tiro e vida das barreiras (TODOS ALEATORIOS);
+
+GAMEPLAY:
+*- o jogador começa em um mapa fácil, e quanto mais avanca, maior a dificuldade (sendo gerada pelo gerador aleatório);
+*- o jogo termina quando o jogador perde 3 vidas;
+*- ao terminar o jogo, deve ser exibido NA TELA "Acabou!", o placar dos últimos 5 jogos deve ser atualizado com o ultimo jogo, a jenela so fecha se o jogador apertar ENTER;
+*- implementar um hack na tecla F2, que encerra todas as fases e leva para a tela final;
+*- o sistema de placar deve ser feito utilizando arquivos, o jogo le o placar de um arquivo quando inicia, e sobrescreve o ultimo quando é fechado;
+
+ADICIONAL:
+*-background gameplay;
+-background tela inicial e final;
+-mudar sprite inimigo
